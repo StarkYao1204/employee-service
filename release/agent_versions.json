@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "service": { "name": "employee-agent-service", "version": "0.1.0" },
+  "runtime": { "python": "3.14", "uv": "0.13.9", "lockfile": "uv.lock" },
+  "agent": {
+    "prompt": {
+      "version": "prompt-1.0.0",
+      "path": "prompts/supervisor.md",
+      "sha256": "21df2673d4f27d2401c07678891c78869f879e5972da72d1c2106784f467071a"
+    },
+    "chat_model": {
+      "provider": "openai-compatible",
+      "model_id": "deepseek-flash",
+      "parameter_profile": "deterministic-v1"
+    },
+    "tools": {
+      "version": "tools-1.0.0",
+      "items": [
+        "search_company_knowledge",
+        "find_department",
+        "find_public_employee",
+        "list_requestable_devices",
+        "create_device_request",
+        "query_device_requests",
+        "approve_device_request"
+      ]
+    },
+    "harness": {
+      "version": "harness-1.0.0",
+      "stop_policy": "supervisor-delegates",
+      "confirmation_policy": "writes-require-confirmation"
+    }
+  },
+  "knowledge": {
+    "embedding": { "model": "text-embedding-v4", "dimensions": 1024 },
+    "snapshot": {
+      "path": "knowledge/knowledge_manifest.json",
+      "sha256": "9c1e2be1266df5ea81c62ee13b9ce21a9adaae920e8b4341bd14957387effee7"
+    },
+    "index": {
+      "collection": "company_knowledge",
+      "path": "vector_store/index_manifest.json",
+      "sha256": "acfabcb1440df4c64b18538a4edb1339b969f3a8153ef421030ee88c4f3a2059"
+    }
+  }
+}

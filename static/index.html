@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>安全多 Agent 助手</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="安全多 Agent 助手首页">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <span>
+            <strong>Agent Workspace</strong>
+            <small>安全多 Agent 助手</small>
+          </span>
+        </a>
+        <span class="info-badge">Multi-Agent · SSE · RAG</span>
+      </header>
+
+      <!-- 登录区：未登录时唯一可见面板；鉴权成功后由 JS 切到 workspace-panel。 -->
+      <section id="login-panel" class="login-shell">
+        <div class="login-intro">
+          <p class="eyebrow">SECURE AGENT SERVICE</p>
+          <h1>让每一次对话，都建立在可信身份之上</h1>
+          <p class="intro-copy">
+            登录后可以查看自己的历史会话、恢复 Agent 上下文，并在统一工作区中继续任务。
+          </p>
+          <ul class="feature-list">
+            <li><span>01</span>JWT 身份认证</li>
+            <li><span>02</span>多会话历史恢复</li>
+            <li><span>03</span>角色与资源权限隔离</li>
+          </ul>
+        </div>
+
+        <div class="login-card">
+          <div class="login-heading">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>服务已就绪</span>
+          </div>
+          <h2>欢迎回来</h2>
+          <p class="muted">使用演示账号进入你的 Agent 工作区</p>
+          <form id="login-form" class="login-form">
+            <div class="field-group">
+              <label for="username">用户名</label>
+              <input id="username" value="zhang_wei" autocomplete="username" />
+            </div>
+            <div class="field-group">
+              <label for="password">密码</label>
+              <input id="password" type="password" autocomplete="current-password" placeholder="请输入密码" />
+            </div>
+            <button id="login-button" class="primary-button login-button" type="submit">进入工作区</button>
+          </form>
+          <div class="demo-account">
+            <span>演示环境</span>
+            <p>全部账号密码 <code>123456</code></p>
+            <small>员工 zhang_wei · HR wang_fang</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- 工作区：左侧会话列表 + 右侧聊天区；当前用户身份只由服务端响应填充。 -->
+      <section id="workspace-panel" class="workspace-shell hidden">
+        <div class="workspace-topbar">
+          <div>
+            <p class="eyebrow">AGENT CONSOLE</p>
+            <h1>对话工作区</h1>
+          </div>
+          <div class="user-menu">
+            <span class="user-avatar" aria-hidden="true">U</span>
+            <span id="current-user" class="current-user"></span>
+            <button id="thread-logout-button" class="ghost-button" type="button">退出</button>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <aside id="thread-panel" class="conversation-sidebar">
+            <div class="sidebar-heading">
+              <div>
+                <p class="section-label">CONVERSATIONS</p>
+                <h2>历史会话</h2>
+              </div>
+              <button id="new-thread-button" class="icon-button" type="button" title="创建新会话" aria-label="创建新会话">＋</button>
+            </div>
+            <p class="muted sidebar-copy">选择一段会话，继续之前的任务。</p>
+
+            <!-- 会话列表的状态位：加载中 / 空列表 / 列表本体，由 JS 切换 hidden。 -->
+            <div id="threads-loading" class="list-state hidden">
+              <span class="spinner" aria-hidden="true"></span>
+              <span>正在加载会话…</span>
+            </div>
+            <div id="threads-empty" class="list-state hidden">
+              <span class="list-state-icon" aria-hidden="true">✦</span>
+              <strong>还没有会话</strong>
+              <small>点击右上角 ＋ 创建第一段对话</small>
+            </div>
+            <!-- 卡片由 JS 动态生成，每张携带 data-thread-id，点击即打开会话。 -->
+            <div id="thread-list" class="thread-list" role="list" aria-label="我的会话"></div>
+          </aside>
+
+          <section id="chat-panel" class="chat-panel hidden">
+            <div class="chat-header">
+              <div>
+                <p class="section-label">CURRENT THREAD</p>
+                <span id="thread-label" class="thread-label"></span>
+              </div>
+              <span class="secure-badge">安全会话</span>
+            </div>
+
+            <div id="messages" class="messages" aria-live="polite">
+              <div id="messages-loading" class="messages-loading hidden">正在加载历史消息…</div>
+            </div>
+
+            <!-- 待确认区：收到 confirmation 事件或历史里存在待确认时显示。 -->
+            <section id="confirmation-panel" class="confirmation hidden">
+              <div class="confirmation-title">
+                <span aria-hidden="true">!</span>
+                <div>
+                  <p class="section-label">HUMAN IN THE LOOP</p>
+                  <h3>需要你的确认</h3>
+                </div>
+              </div>
+              <pre id="confirmation-content"></pre>
+              <div class="actions">
+                <button id="approve-button" class="primary-button" type="button">确认继续</button>
+                <button id="reject-button" class="danger-button" type="button">拒绝</button>
+              </div>
+            </section>
+
+            <form id="chat-form" class="chat-form">
+              <label class="sr-only" for="message">输入问题</label>
+              <textarea id="message" rows="3" placeholder="向 Agent 提问，例如：我可以申请哪些显示设备？"></textarea>
+              <div class="composer-footer">
+                <span>Agent 可能调用工具，请确认重要操作</span>
+                <div class="actions">
+                  <button id="cancel-button" class="danger-button hidden" type="button">停止</button>
+                  <button id="send-button" class="send-button" type="submit">发送 <span aria-hidden="true">↑</span></button>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section id="empty-chat" class="empty-chat">
+            <div class="empty-icon" aria-hidden="true">✦</div>
+            <p class="section-label">READY WHEN YOU ARE</p>
+            <h2>选择或创建一段会话</h2>
+            <p>从左侧历史记录继续任务，也可以创建一个新的 Agent 会话。</p>
+          </section>
+        </div>
+      </section>
+
+      <p id="error-message" class="error" role="alert"></p>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
