@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Check lockfile
+        run: uv lock --check
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Ruff check
+        run: uv run --locked ruff check .
+
+      - name: Ruff format check
+        run: uv run --locked ruff format --check .
+
+      - name: mypy
+        run: uv run --locked mypy app
+
+      - name: Unit tests
+        run: uv run --locked pytest -m "not integration" --cov --cov-report=term-missing
+
+      - name: Validate version manifest
+        run: uv run --locked python scripts/validate_version_manifest.py
+
+      - name: Secret check
+        run: git ls-files -z | xargs -0 uv run --locked detect-secrets-hook --baseline .secrets.baseline
+
+      - name: Build packages
+        run: uv build --all-packages --out-dir dist
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence-${{ github.sha }}
+          path: dist/
